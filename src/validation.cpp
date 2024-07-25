@@ -367,7 +367,7 @@ void Chainstate::MaybeUpdateMempoolForReorg(
                 if (it2 != m_mempool->mapTx.end())
                     continue;
                 const Coin& coin{CoinsTip().AccessCoin(txin.prevout)};
-                //assert(!coin.IsSpent());
+                assert(!coin.IsSpent());
                 const auto mempool_spend_height{m_chain.Tip()->nHeight + 1};
                 if (coin.IsCoinBase() && mempool_spend_height - coin.nHeight < COINBASE_MATURITY) {
                     return true;
@@ -417,7 +417,7 @@ static bool CheckInputsFromMempoolAndCache(const CTransaction& tx, TxValidationS
             assert(txFrom->vout[txin.prevout.n] == coin.out);
         } else {
             const Coin& coinFromUTXOSet = coins_tip.AccessCoin(txin.prevout);
-            //assert(!coinFromUTXOSet.IsSpent());
+            assert(!coinFromUTXOSet.IsSpent());
             assert(coinFromUTXOSet.out == coin.out);
         }
     }
@@ -682,18 +682,17 @@ private:
 
 bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
 {
-    return  true;
-    //AssertLockHeld(cs_main);
-    //AssertLockHeld(m_pool.cs);
-    //const CTransactionRef& ptx = ws.m_ptx;
-    //const CTransaction& tx = *ws.m_ptx;
-    //const uint256& hash = ws.m_hash;
+    AssertLockHeld(cs_main);
+    AssertLockHeld(m_pool.cs);
+    const CTransactionRef& ptx = ws.m_ptx;
+    const CTransaction& tx = *ws.m_ptx;
+    const uint256& hash = ws.m_hash;
 
-    //// Copy/alias what we need out of args
-    //const int64_t nAcceptTime = args.m_accept_time;
-    //const bool bypass_limits = args.m_bypass_limits;
-    //std::vector<COutPoint>& coins_to_uncache = args.m_coins_to_uncache;
-/*@
+    // Copy/alias what we need out of args
+    const int64_t nAcceptTime = args.m_accept_time;
+    const bool bypass_limits = args.m_bypass_limits;
+    std::vector<COutPoint>& coins_to_uncache = args.m_coins_to_uncache;
+
     // Alias what we need out of ws
     TxValidationState& state = ws.m_state;
     std::unique_ptr<CTxMemPoolEntry>& entry = ws.m_entry;
@@ -765,10 +764,8 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
     m_view.SetBackend(m_viewmempool);
 
     const CCoinsViewCache& coins_cache = m_active_chainstate.CoinsTip();
-    m_rbf = !ws.m_conflicts.empty();
-    return true;
     // do all inputs exist?
- /*   for (const CTxIn& txin : tx.vin) {
+    for (const CTxIn& txin : tx.vin) {
         if (!coins_cache.HaveCoinInCache(txin.prevout)) {
             coins_to_uncache.push_back(txin.prevout);
         }
@@ -781,11 +778,11 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
             for (size_t out = 0; out < tx.vout.size(); out++) {
                 // Optimistically just do efficient check of cache for outputs
                 if (coins_cache.HaveCoinInCache(COutPoint(hash, out))) {
-                    //return state.Invalid(TxValidationResult::TX_CONFLICT, "txn-already-known");
+                    return state.Invalid(TxValidationResult::TX_CONFLICT, "txn-already-known");
                 }
             }
             // Otherwise assume this might be an orphan tx for which we just haven't seen parents yet
-            //return state.Invalid(TxValidationResult::TX_MISSING_INPUTS, "bad-txns-inputs-missingorspent");
+            return state.Invalid(TxValidationResult::TX_MISSING_INPUTS, "bad-txns-inputs-missingorspent");
         }
     }
 
@@ -807,7 +804,7 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
     // backend was removed, it no longer pulls coins from the mempool.
     const std::optional<LockPoints> lock_points{CalculateLockPointsAtTip(m_active_chainstate.m_chain.Tip(), m_view, tx)};
     if (!lock_points.has_value() || !CheckSequenceLocksAtTip(m_active_chainstate.m_chain.Tip(), *lock_points)) {
-        //return state.Invalid(TxValidationResult::TX_PREMATURE_SPEND, "non-BIP68-final");
+        return state.Invalid(TxValidationResult::TX_PREMATURE_SPEND, "non-BIP68-final");
     }
 
     // The mempool holds txs for the next block, so pass height+1 to CheckTxInputs
@@ -816,12 +813,12 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
     }
 
     if (m_pool.m_require_standard && !AreInputsStandard(tx, m_view)) {
-        //return state.Invalid(TxValidationResult::TX_INPUTS_NOT_STANDARD, "bad-txns-nonstandard-inputs");
+        return state.Invalid(TxValidationResult::TX_INPUTS_NOT_STANDARD, "bad-txns-nonstandard-inputs");
     }
 
     // Check for non-standard witnesses.
     if (tx.HasWitness() && m_pool.m_require_standard && !IsWitnessStandard(tx, m_view)) {
-        //return state.Invalid(TxValidationResult::TX_WITNESS_MUTATED, "bad-witness-nonstandard");
+        return state.Invalid(TxValidationResult::TX_WITNESS_MUTATED, "bad-witness-nonstandard");
     }
 
     int64_t nSigOpsCost = GetTransactionSigOpCost(tx, m_view, STANDARD_SCRIPT_VERIFY_FLAGS);
@@ -846,8 +843,8 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
     ws.m_vsize = entry->GetTxSize();
 
     if (nSigOpsCost > MAX_STANDARD_TX_SIGOPS_COST)
-        //return state.Invalid(TxValidationResult::TX_NOT_STANDARD, "bad-txns-too-many-sigops",
-                //strprintf("%d", nSigOpsCost));
+        return state.Invalid(TxValidationResult::TX_NOT_STANDARD, "bad-txns-too-many-sigops",
+                strprintf("%d", nSigOpsCost));
 
     // No individual transactions are allowed below the min relay feerate and mempool min feerate except from
     // disconnected blocks and transactions in a package. Package transactions will be checked using
@@ -931,7 +928,7 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-spends-conflicting-tx", *err_string);
     }
 
-    m_rbf = !ws.m_conflicts.empty();*/
+    m_rbf = !ws.m_conflicts.empty();
     return true;
 }
 
@@ -1776,7 +1773,6 @@ bool CheckInputScripts(const CTransaction& tx, TxValidationState& state,
                        bool cacheFullScriptStore, PrecomputedTransactionData& txdata,
                        std::vector<CScriptCheck>* pvChecks)
 {
-  /*
     if (tx.IsCoinBase()) return true;
 
     if (pvChecks) {
@@ -1803,7 +1799,7 @@ bool CheckInputScripts(const CTransaction& tx, TxValidationState& state,
         for (const auto& txin : tx.vin) {
             const COutPoint& prevout = txin.prevout;
             const Coin& coin = inputs.AccessCoin(prevout);
-            //assert(!coin.IsSpent());
+            assert(!coin.IsSpent());
             spent_outputs.emplace_back(coin.out);
         }
         txdata.Init(tx, std::move(spent_outputs));
@@ -1854,7 +1850,7 @@ bool CheckInputScripts(const CTransaction& tx, TxValidationState& state,
         // We executed all of the provided scripts, and were told to
         // cache the result. Do so now.
         g_scriptExecutionCache.insert(hashCacheEntry);
-    }*/
+    }
 
     return true;
 }
@@ -3635,7 +3631,6 @@ static bool ContextualCheckBlockHeader(const CBlockHeader& block, BlockValidatio
     assert(pindexPrev != nullptr);
     const int nHeight = pindexPrev->nHeight + 1;
 
-    return true;
     // Check proof of work
     const Consensus::Params& consensusParams = chainman.GetConsensus();
     if (block.nBits != GetNextWorkRequired(pindexPrev, &block, consensusParams))
@@ -3740,7 +3735,6 @@ static bool ContextualCheckBlock(const CBlock& block, BlockValidationState& stat
     }
 
     // No witness data is allowed in blocks that don't commit to witness data, as this would otherwise leave room for spam
-    return true;
     if (!fHaveWitness) {
       for (const auto& tx : block.vtx) {
             if (tx->HasWitness()) {
@@ -4075,7 +4069,7 @@ bool TestBlockValidity(BlockValidationState& state,
                        bool fCheckPOW,
                        bool fCheckMerkleRoot)
 {
-    /*AssertLockHeld(cs_main);
+    AssertLockHeld(cs_main);
     assert(pindexPrev && pindexPrev == chainstate.m_chain.Tip());
     CCoinsViewCache viewNew(&chainstate.CoinsTip());
     uint256 block_hash(block.GetHash());
@@ -4095,7 +4089,7 @@ bool TestBlockValidity(BlockValidationState& state,
         return false;
     }
     assert(state.IsValid());
-*/
+
     return true;
 }
 
