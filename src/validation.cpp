@@ -765,7 +765,7 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
 
     const CCoinsViewCache& coins_cache = m_active_chainstate.CoinsTip();
     // do all inputs exist?
-    for (const CTxIn& txin : tx.vin) {
+    /*for (const CTxIn& txin : tx.vin) {
         if (!coins_cache.HaveCoinInCache(txin.prevout)) {
             coins_to_uncache.push_back(txin.prevout);
         }
@@ -784,7 +784,7 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
             // Otherwise assume this might be an orphan tx for which we just haven't seen parents yet
             return state.Invalid(TxValidationResult::TX_MISSING_INPUTS, "bad-txns-inputs-missingorspent");
         }
-    }
+    }*/
 
     // This is const, but calls into the back end CoinsViews. The CCoinsViewDB at the bottom of the
     // hierarchy brings the best block into scope. See CCoinsViewDB::GetBestBlock().
