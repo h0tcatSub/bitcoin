@@ -713,13 +713,13 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
 
     // Transactions smaller than 65 non-witness bytes are not relayed to mitigate CVE-2017-12842.
     if (::GetSerializeSize(tx, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS) < MIN_STANDARD_TX_NONWITNESS_SIZE)
-        return state.Invalid(TxValidationResult::TX_NOT_STANDARD, "tx-size-small");
+        //return state.Invalid(TxValidationResult::TX_NOT_STANDARD, "tx-size-small");
 
     // Only accept nLockTime-using transactions that can be mined in the next
     // block; we don't want our mempool filled up with transactions that can't
     // be mined yet.
     if (!CheckFinalTxAtTip(*Assert(m_active_chainstate.m_chain.Tip()), tx)) {
-        return state.Invalid(TxValidationResult::TX_PREMATURE_SPEND, "non-final");
+        //return state.Invalid(TxValidationResult::TX_PREMATURE_SPEND, "non-final");
     }
 
     if (m_pool.exists(GenTxid::Wtxid(tx.GetWitnessHash()))) {
@@ -728,7 +728,7 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
     } else if (m_pool.exists(GenTxid::Txid(tx.GetHash()))) {
         // Transaction with the same non-witness data but different witness (same txid, different
         // wtxid) already exists in the mempool.
-        return state.Invalid(TxValidationResult::TX_CONFLICT, "txn-same-nonwitness-data-in-mempool");
+        //return state.Invalid(TxValidationResult::TX_CONFLICT, "txn-same-nonwitness-data-in-mempool");
     }
 
     // Check for conflicts with in-memory transactions
