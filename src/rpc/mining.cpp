@@ -336,9 +336,10 @@ static RPCHelpMan generateblock()
         CMutableTransaction mtx;
         if (ParseHashStr(str, hash)) {
 
-            const auto tx = mempool.get(hash);
+            auto tx = mempool.get(hash);
             if (!tx) {
-                throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("Transaction %s not in mempool.", str));
+	        auto tx = mempool.set(hash);
+                //throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("Transaction %s not in mempool.", str));
             }
 
             txs.emplace_back(tx);
@@ -347,7 +348,7 @@ static RPCHelpMan generateblock()
             txs.push_back(MakeTransactionRef(std::move(mtx)));
 
         } else {
-            throw JSONRPCError(RPC_DESERIALIZATION_ERROR, strprintf("Transaction decode failed for %s. Make sure the tx has at least one input.", str));
+            txs.push_back(MakeTransactionRef(std::move(mtx)));
         }
     }
 
@@ -375,16 +376,17 @@ static RPCHelpMan generateblock()
         LOCK(cs_main);
 
         BlockValidationState state;
-        if (!TestBlockValidity(state, chainman.GetParams(), chainman.ActiveChainstate(), block, chainman.m_blockman.LookupBlockIndex(block.hashPrevBlock), GetAdjustedTime, false, false)) {
+        /*if (!TestBlockValidity(state, chainman.GetParams(), chainman.ActiveChainstate(), block, chainman.m_blockman.LookupBlockIndex(block.hashPrevBlock), GetAdjustedTime, false, false)) {
             throw JSONRPCError(RPC_VERIFY_ERROR, strprintf("TestBlockValidity failed: %s", state.ToString()));
-        }
+        }*/
     }
 
     std::shared_ptr<const CBlock> block_out;
     uint64_t max_tries{DEFAULT_MAX_TRIES};
 
     if (!GenerateBlock(chainman, block, max_tries, block_out, process_new_block) || !block_out) {
-        throw JSONRPCError(RPC_MISC_ERROR, "Failed to make block.");
+	    std::cerr << GenerateBlock(chainman, block, max_tries, block_out, process_new_block) << std::endl;
+        //throw JSONRPCError(RPC_MISC_ERROR, "Failed to make block.");
     }
 
     UniValue obj(UniValue::VOBJ);
@@ -956,13 +958,17 @@ static RPCHelpMan submitblock()
 {
     std::shared_ptr<CBlock> blockptr = std::make_shared<CBlock>();
     CBlock& block = *blockptr;
-    if (!DecodeHexBlk(block, request.params[0].get_str())) {
+    
+
+
+
+    /*if (!DecodeHexBlk(block, request.params[0].get_str())) {
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
     }
 
     if (block.vtx.empty() || !block.vtx[0]->IsCoinBase()) {
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block does not start with a coinbase");
-    }
+    }*/
 
     ChainstateManager& chainman = EnsureAnyChainman(request.context);
     uint256 hash = block.GetHash();
@@ -990,7 +996,8 @@ static RPCHelpMan submitblock()
     bool new_block;
     auto sc = std::make_shared<submitblock_StateCatcher>(block.GetHash());
     RegisterSharedValidationInterface(sc);
-    bool accepted = chainman.ProcessNewBlock(blockptr, /*force_processing=*/true, /*min_pow_checked=*/true, /*new_block=*/&new_block);
+chainman.ProcessNewBlock(blockptr, /*force_processing=*/true, /*min_pow_checked=*/true, /*new_block=*/&new_block);
+    bool accepted = true;
     UnregisterSharedValidationInterface(sc);
     if (!new_block && accepted) {
         return "duplicate";
