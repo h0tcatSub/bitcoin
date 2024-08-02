@@ -338,7 +338,7 @@ static RPCHelpMan generateblock()
 
             auto tx = mempool.get(hash);
             if (!tx) {
-	        auto tx = mempool.set(hash);
+//auto tx = mempool.set(hash);
                 //throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("Transaction %s not in mempool.", str));
             }
 
@@ -958,7 +958,7 @@ static RPCHelpMan submitblock()
 {
     std::shared_ptr<CBlock> blockptr = std::make_shared<CBlock>();
     CBlock& block = *blockptr;
-    
+
 
 
 
