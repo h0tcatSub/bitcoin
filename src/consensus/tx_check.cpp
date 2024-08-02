@@ -41,7 +41,7 @@ bool CheckTransaction(const CTransaction& tx, TxValidationState& state)
     // the underlying coins database.
     std::set<COutPoint> vInOutPoints;
     for (const auto& txin : tx.vin) {
-        if (!vInOutPoints.insert(txin.prevout).second)
+        //if (!vInOutPoints.insert(txin.prevout).second)
             //return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-inputs-duplicate");
     }
 
