@@ -39,11 +39,11 @@ bool CheckTransaction(const CTransaction& tx, TxValidationState& state)
     // of a tx as spent, it does not check if the tx has duplicate inputs.
     // Failure to run this check will result in either a crash or an inflation bug, depending on the implementation of
     // the underlying coins database.
-    std::set<COutPoint> vInOutPoints;
-    for (const auto& txin : tx.vin) {
+    /*std::set<COutPoint> vInOutPoints;
+    //for (const auto& txin : tx.vin) {
         //if (!vInOutPoints.insert(txin.prevout).second)
             //return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-inputs-duplicate");
-    }
+    //}
 
     if (tx.IsCoinBase())
     {
@@ -55,7 +55,7 @@ bool CheckTransaction(const CTransaction& tx, TxValidationState& state)
         for (const auto& txin : tx.vin)
             if (txin.prevout.IsNull())
                 //return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-prevout-null");
-    }
+    }*/
 
     return true;
 }
